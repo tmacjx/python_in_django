@@ -1,0 +1,59 @@
+生成器:
+   任何包含有yield关键字的函数都被称为生成器函数。
+   生成器函数被调用时，返回一个生成器对象。
+
+示例1: 
+>>> def gen_123():   
+...     yield 1
+...     yield 2
+...     yield 3
+>>> gen_123 
+<function gen_123 at 0x...> 
+>>> gen_123()
+<generator object gen_123 at 0...>
+
+>>> for item in gen_123():
+        print item
+   ＃ Generators are iterators that produce the values of the expressions passed to yield.
+   ＃ 生成器也是迭代器，产生表达式传递给yield的值
+1 
+2
+3
+>>> g = gen_123()
+>>> next(g)
+1
+>>> next(g)
+2
+>>> next(g)
+3
+>>> next(g)
+Traceback (most recent call last):
+...
+    StopIteration
+
+
+因为g是迭代器，调用next(g)会取得下一个被yield产生的值
+当函数体执行完毕，生成器对象引发StopIteration异常
+
+
+>>> def gen_AB(): #
+...     print('start') 
+...     yield 'A' # 
+...     print('continue') 
+...     yield 'B' # 
+...     print('end.') # ...
+>>> for c in gen_AB(): # for循环 通过 g = iter(gen_AB())来得到生成器对象，接着在每次迭代中调用next(g)
+...     print('-->', c) 
+start     # 在for循环中第一次隐式的调用next方法， 会打印start，并且暂停到第一个yield处，产生A
+--> A 
+continue  # 在for循环中第二次的隐式的调用next方法，会打印continue， 并且暂停到第二个yield处， 产生B
+--> B    
+end.      # 第三次调用next会打印end， 运行到函数的尾部，生成器对象引发StopIteration异常
+>>> 
+
+
+
+
+
+
+

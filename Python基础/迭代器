@@ -1,0 +1,174 @@
+1.为什么需要迭代器
+2.如何迭代
+3.如何创建迭代器
+
+
+迭代器的定义：
+
+
+Whenever the interpreter needs to iterate over an object x, it automatically calls iter(x). 
+The iter built-in function:
+1. Checks whether the object implements__iter__,and calls that to obtain an iterator. 
+2. If __iter__ is not implemented, but __getitem__ is implemented, Python creates an iterator that attempts to fetch items in order, starting from index 0 (zero).
+3. If that fails,Python raises TypeError,usually saying “C object is not iterable,” where C is the class of the target object.
+
+当python解释器需要迭代一个对象x时，解释器自动调用python内置的iter工厂函数
+工厂函数iter()的原理：
+1.检查对象x是否实现了__iter__方法， 然后调用__iter__去获得一个迭代器对象
+2.如果__iter__没有被实现，但是__getitem__实现了，python会创建一个迭代器对象去按顺序取得对应的元素，从下标0开始
+3.如果失败的话，python会引发一个TypeError， 提示“c 对象是不可以被迭代的”
+
+
+That is why any Python sequence is iterable: they all implement __getitem__. In fact, the standard sequences also implement __iter__, and yours should too, because the special handling of __getitem__ exists for backward compatibility reasons and may be gone in the future (although it is not deprecated as I write this).
+这就是为什么python序列是可以迭代的，因为他们全部实现了__getitem__方法。事实上， 标准的序列也实现了__iter__方法，并且你也应该这样做，因为对__getitem__的特殊处理，可能会在将来的版本中取消。
+
+
+示例1：
+#!/usr/bin/python
+import re
+
+RE_WORDS = re.compile('\w+')
+
+class Sequence(object):
+    def __init__(self, text):
+        self.words = RE_WORDS.findall(text)
+    def __getitem__(self, index):
+        return self.words[index]
+         
+if __name__ == '__main__':
+    se = Sequence("I come from china")
+    for word in se:
+        print word
+
+
+
+
+
+
+实际上，因为迭代操作如此普遍，Python专门将关键字for用作了迭代器的语法糖。
+
+
+Python中的for循环：
+for i in seq:
+    do_something(i)
+
+等同于:
+
+fetch = iter(seq)
+while True:
+    try:
+        i =  fetch.next()
+    except StopIteration:
+        break
+    do_something(i)
+        
+ 在for循环中，Python将自动调用工厂函数iter()获得迭代器，自动调用next()获取元素，以及监视StopIteration异常
+
+ 常用的几个内建数据结构tuple、list、set、dict都支持迭代器，字符串也可以使用迭代操作。
+ 你也可以自己实现一个迭代器，如上所述，只需要在类的__iter__方法中返回一个对象，这个对象拥有一个next()方法，
+ 这个方法能在恰当的时候抛出StopIteration异常即可
+
+
+Any object from which the iter built-in function can obtain an iterator. Objects implementing an __iter__ method returning an iterator are iterable. Sequences
+  Iterables Versus Iterators | 405
+are always iterable; as are objects implementing a __getitem__ method that takes 0-based indexes.
+
+
+可迭代（iterable):
+    任何对象，只要满足，通过python内建的工厂函数iter可以获得迭代器对象
+    实现了__iter__方法的对象 和 python的序列 都是可迭代的，因为对象实现了__getitem__方法，并且从0开始下标。
+迭代器（iterator):
+    任何实现了__next__的方法，并且返回序列中的下一个元素 或者 引发StopIteration当没有更多元素的时候。
+    python迭代器也实现了__iter__方法， 以便它们也是可迭代的
+
+
+
+
+如何理解 iterable和iterator
+
+
+
+示例2:
+
+#coding=utf-8
+#!/usr/bin/python
+from collections.abc import Iterable
+"""
+Python 3 添加了一个新的框架 —abc— 它提供了对 ABC 的支持。
+这个 abc 模块具有一个元类（ABCMeta）和 修饰符（@abstractmethod 和 @abstractproperty）。
+如果一个 ABC 具有一个 @abstractmethod 或 @abstractproperty，
+它就不能被实例化，但必须在一个子类内被覆盖
+"""
+from abc import *
+
+#import collections.abc.Iterator
+class Iterator(Iterable):
+    @abstractmethod
+    def __next__(self):
+        'Return the next item from the iterator. When exhausted, raise StopIteration'
+        raise StopIteration
+    def __iter__(self):
+        return self
+    @classmethod
+    def __subclasshook__(cls, C):
+        if cls is Iterator:
+            if any("__next__" in B.__dict__ for B in C.__mro__) and any("__iter__" in B.__dict__ for B in C.__mro):
+                return True
+        return NotImplemented
+
+
+iterable和iterator的关系:
+    Sentence是可迭代的，因为它实现了__iter__特殊方法，并且新建并且返回了一个SentenceIteraor对象。
+    这是<设计模式>一书中如何描述迭代器模式.
+
+示例3:
+#coding=utf-8
+import re
+
+RE_WORDS = re.compile('\w+')
+
+class Sentence(object):
+    def __init__(self, text):
+        self.words = RE_WORDS.findall(text)
+    def __iter__(self):
+        return SentenceIterator(self.words)
+        
+class SentenceIterator(object):
+    def __init__(self, words):
+        self.words = words
+        self.index = 0
+    def __next__(self):
+        try:
+            word = self.words[self.index]
+        except IndexError:
+            raise StopIteration()
+        self.index += 1
+        return word
+    def __iter__(self):
+        return self 
+if __name__ == '__main__':
+    se = Sentence("I come form china")
+    for item in se:
+        print(item)
+
+    
+
+生成器：
+
+A generator function builds a generator object that wraps the body of the function. When we invoke next(...) on the generator object, execution advances to the next yield in the function body, and the next(...) call evaluates to the value yielded when the function body is suspended. Finally, when the function body returns, the enclosing generator object raises StopIteration, in accordance with the Iterator protocol.
+
+
+
+
+生成器函数，创建了一个生成器对象，包装了整个函数体。当我们在生成器对象上执行next方法时，执行到下一个yield的位置，并且返回yield所对应的值。最后，当函数体返回的时候，生成器对象引发了StopIteration
+异常，依照迭代器协议。
+所以说，生成器也是迭代器。
+
+
+
+
+
+
+
+
+
